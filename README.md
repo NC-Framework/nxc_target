@@ -16,7 +16,7 @@ Target-first world interaction for Nexus Core.
 
 - `nxc_lib`
 - `nxc_zones`
-- `nexus_core`
+- `nxc_core`
 
 ## Installation
 

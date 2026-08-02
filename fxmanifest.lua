@@ -24,5 +24,5 @@ files {
 dependencies {
     'nxc_lib',
     'nxc_zones',
-    'nexus_core',
+    'nxc_core',
 }
