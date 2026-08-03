@@ -51,10 +51,22 @@ shared_scripts {
     'shared/registry.lua',
 }
 
+client_scripts {
+    'client/raycast.lua',
+    'client/runtime.lua',
+    'client/input.lua',
+}
+
 server_scripts {
     'server/service.lua',
 }
 
+-- nxc_ui is NOT declared here, deliberately.
+--
+-- Every call into it is guarded by GetResourceState, so a server without it
+-- gets a working target system with no menu rather than a resource that
+-- refuses to start. ADR-0018 makes this a distributable framework: a server
+-- may substitute its own interface, and a hard dependency would forbid that.
 dependencies {
     'nxc_lib',
     'nxc_zones',
