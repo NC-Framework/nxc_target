@@ -24,7 +24,7 @@ nxc_legacy_compatibility 'none'
 
 author 'The Nexus Core Framework team'
 description 'Target-first world interaction for Nexus Core.'
-version '0.1.3'
+version '0.1.4'
 
 shared_scripts {
     '@nxc_lib/shared/namespace.lua',

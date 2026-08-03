@@ -16,6 +16,17 @@ local registry = NxcTarget.Registry.new()
 local activeOptions = nil
 local targeting = false
 
+--- Whether a menu is open and holding the cursor.
+---
+--- **RELEASING THE KEY MUST NOT DESTROY IT.** A context menu takes focus and
+--- gives the player a cursor, so reaching that cursor means letting go of the
+--- key — and clearing the offered options at that moment throws away exactly
+--- what the click is about to need.
+---
+--- The menu closes on a selection, on Escape, or when something else closes it.
+--- Not on the key that opened it.
+local menuOpen = false
+
 --- Everything the client knows about its own situation.
 ---
 --- Assembled once per resolution rather than per option, because a hundred
@@ -101,6 +112,7 @@ local function present()
     if NxcTarget.Reticle then NxcTarget.Reticle.set('available') end
 
     activeOptions = { hit = hit, options = options }
+    menuOpen = true
 
     -- Drawn by nxc_ui, which owns the single browser instance. A resource
     -- opening its own NUI is a second browser in the game client, which
@@ -129,6 +141,7 @@ end
 function Runtime.select(key)
     local current = activeOptions
     activeOptions = nil
+    menuOpen = false
 
     if not current then return end
 
@@ -167,6 +180,10 @@ function Runtime.setActive(active)
     targeting = active
 
     if not targeting then
+        -- The raycast loop stops either way. What survives depends on whether
+        -- the player is mid-decision.
+        if menuOpen then return end
+
         activeOptions = nil
         if GetResourceState('nxc_ui') == 'started' then
             pcall(function() exports.nxc_ui:close() end)
@@ -235,6 +252,15 @@ end)
 
 RegisterNetEvent('nxc_target:client:removeOwner', function(owner)
     NxcTarget.Registry.removeOwner(registry, owner)
+end)
+
+--- The menu closed without a selection: Escape, or something else took over.
+AddEventHandler('nxc_ui:client:closed', function(surface)
+    if surface ~= 'nxc_target' then return end
+    menuOpen = false
+    -- Only clear the offer if targeting has already stopped. If the key is still
+    -- held, the next pass rebuilds it a moment later anyway.
+    if not targeting then activeOptions = nil end
 end)
 
 AddEventHandler('onClientResourceStop', function(resource)

@@ -2,6 +2,26 @@
 
 Entries are added only for genuinely user-visible or contract-relevant changes.
 
+## 0.1.4 - 2026-08-03
+
+### Fixed
+
+- **Clicking a menu item did nothing.** Three problems compounded:
+
+  nxc_ui forwarded the callback to the server only, so this resource never heard
+  the click. Fixed in nxc_ui 0.2.3.
+
+  **Releasing the key destroyed the selection.** A context menu takes focus and
+  gives the player a cursor, so reaching that cursor means letting go of the key
+  — and that cleared the offered options and closed the menu. The menu now closes
+  on a selection, on Escape, or when something else closes it. Not on the key
+  that opened it.
+
+  The selection handler was registered only if nxc_ui happened to be started at
+  the instant this file loaded. Registering a handler costs nothing, and the
+  guard meant a startup ordering accident would silently disable clicking
+  forever.
+
 ## 0.1.3 - 2026-08-03
 
 ### Fixed

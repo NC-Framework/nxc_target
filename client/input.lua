@@ -34,12 +34,18 @@ RegisterKeyMapping('+nxcTarget', 'Interact with what you are looking at',
 --- Arrives through nxc_ui's callback, which validated the shape on both sides
 --- before it got here. What it carries is an option key, and the key is checked
 --- against what was actually offered before anything is sent.
-if GetResourceState('nxc_ui') ~= 'missing' then
-    AddEventHandler('nxc_ui:client:selected', function(surface, itemId)
-        if surface ~= 'nxc_target' then return end
-        NxcTarget.Runtime.select(itemId)
-    end)
-end
+--- Registered unconditionally.
+---
+--- It was guarded on nxc_ui's resource state at load, which is a failure mode
+--- rather than a saving: registering a handler costs nothing, and the guard
+--- meant that if nxc_ui happened not to be started at the instant this file
+--- loaded, clicking a menu item would silently do nothing forever.
+AddEventHandler('nxc_ui:client:selected', function(surface, response)
+    if surface ~= 'nxc_target' then return end
+    -- The response carries the action and the chosen item. nxc_ui validated its
+    -- shape on both sides before it reached here.
+    NxcTarget.Runtime.select(response and response.itemId)
+end)
 
 --- Release targeting when the player loses control of it.
 ---

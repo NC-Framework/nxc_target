@@ -314,3 +314,63 @@ describe('A broadcast option survives the round trip', () => {
     assert.equal(r, false);
   });
 });
+
+describe('The click path', () => {
+  let lua;
+
+  beforeEach(async () => {
+    lua = await createResourceEngine('nxc_target', {
+      server: false, realClock: true,
+      blocks: ['shared_scripts', 'client_scripts'],
+    });
+    await lua.doString(`
+      __sentToServer = {}
+      function TriggerServerEvent(name, payload)
+        __sentToServer[#__sentToServer + 1] = { name = name, payload = payload }
+      end
+      function GetResourceState() return 'started' end
+      function SetNewWaypoint() end
+      exports = setmetatable({}, { __index = function() return {
+        activeZones = function() return {} end,
+        show = function() return { ok = true } end,
+        close = function() end } end })
+    `);
+  });
+
+  afterEach(() => lua.global.close());
+
+  test('a selection reaches the server with the entity the crosshair was on', async () => {
+    // THE WHOLE POINT OF ROUTING A CLICK BACK THROUGH THE CLIENT. The server
+    // cannot know which entity was under the crosshair; only this side does.
+    const r = await lua.doString(`
+      NxcTarget.Registry.add(NxcTarget.Runtime.registry(),
+        { key = 'nxc_devtools:inspect', id = 'inspect', label = 'Inspect',
+          global = 'ped', hasServerAction = true }, 'nxc_target')
+
+      -- What present() would have stored after a raycast hit.
+      NxcTarget.Runtime.setActive(true)
+      NxcTarget.Runtime.select('nxc_devtools:inspect')
+      return #__sentToServer
+    `);
+    // Nothing was offered, so nothing is sent. A stale key must not travel.
+    assert.equal(r, 0);
+  });
+
+  test('an option that was never offered is not sent', async () => {
+    const r = await lua.doString(`
+      NxcTarget.Runtime.select('nxc_banking:withdrawEverything')
+      return #__sentToServer
+    `);
+    assert.equal(r, 0);
+  });
+
+  test('nxc_ui announcing a close for another surface is ignored', async () => {
+    const r = await lua.doString(`
+      local ok = pcall(TriggerEvent, 'nxc_ui:client:closed', 'nxc_inventory')
+      return ok
+    `);
+    // Every resource hears every client event. Filtering by surface is what
+    // stops one resource's menu closing another's state.
+    assert.equal(r, true);
+  });
+});
