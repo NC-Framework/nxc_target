@@ -26,9 +26,34 @@ author 'The Nexus Core Framework team'
 description 'Target-first world interaction for Nexus Core.'
 version '0.1.0'
 
--- No script blocks are declared yet: this resource has no code, and a manifest
--- that declares files which do not exist is a lie the server may tolerate and a
--- reviewer will not notice. Blocks are added as each directory gains files.
+shared_scripts {
+    '@nxc_lib/shared/namespace.lua',
+    '@nxc_lib/shared/result.lua',
+    '@nxc_lib/shared/errors.lua',
+    '@nxc_lib/shared/correlation.lua',
+    '@nxc_lib/shared/time.lua',
+    '@nxc_lib/shared/serialize.lua',
+    '@nxc_lib/shared/validate.lua',
+    '@nxc_lib/shared/envelope.lua',
+    '@nxc_lib/shared/ratelimit.lua',
+    '@nxc_lib/shared/cancel.lua',
+    '@nxc_lib/shared/logger.lua',
+    '@nxc_lib/shared/locale.lua',
+    '@nxc_lib/shared/permissions.lua',
+    '@nxc_lib/shared/health.lua',
+    '@nxc_lib/shared/persistence.lua',
+    '@nxc_lib/shared/migrations.lua',
+    '@nxc_lib/shared/config_schema.lua',
+
+    'shared/namespace.lua',
+    'shared/options.lua',
+    'shared/filters.lua',
+    'shared/registry.lua',
+}
+
+server_scripts {
+    'server/service.lua',
+}
 
 dependencies {
     'nxc_lib',
