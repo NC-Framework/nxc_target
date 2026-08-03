@@ -2,6 +2,29 @@
 
 Entries are added only for genuinely user-visible or contract-relevant changes.
 
+## 0.1.5 - 2026-08-03
+
+### Changed
+
+- **Hold to interact is restored, and recorded as a decision.** 0.1.4 made the
+  menu persist after the key was released, on the reasoning that reaching a
+  cursor means letting go. That reasoning is wrong for this interface: the cursor
+  is available while the key is held, the mouse moves freely, and the release IS
+  the cancel.
+
+  It was behaviour somebody had chosen, changed as though it were a defect. The
+  note in the source says so, so the next person to find it obvious does not
+  change it back.
+
+- The menu is sent to the interface **once per distinct offer** rather than every
+  150ms. React reconciles a repeated identical message — the buttons are keyed,
+  so clicking was never broken by it — but it was seven messages a second for no
+  change, and it made the menu reopen immediately after a selection closed it.
+
+  Offers are compared structurally rather than by joining into one string. A
+  separator has to be a character no label contains, and picking one is a bet
+  that gets lost eventually.
+
 ## 0.1.4 - 2026-08-03
 
 ### Fixed

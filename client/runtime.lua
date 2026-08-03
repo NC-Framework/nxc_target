@@ -16,16 +16,34 @@ local registry = NxcTarget.Registry.new()
 local activeOptions = nil
 local targeting = false
 
---- Whether a menu is open and holding the cursor.
+--- What was last sent to the interface.
 ---
---- **RELEASING THE KEY MUST NOT DESTROY IT.** A context menu takes focus and
---- gives the player a cursor, so reaching that cursor means letting go of the
---- key — and clearing the offered options at that moment throws away exactly
---- what the click is about to need.
+--- The resolve loop runs every 150ms while the key is held, and without this it
+--- pushes an identical menu to the browser about seven times a second. React
+--- reconciles it — the buttons are keyed, so clicking still works — but it is
+--- seven messages a second for no change, and it makes the menu reopen
+--- immediately after a selection closes it.
 ---
---- The menu closes on a selection, on Escape, or when something else closes it.
---- Not on the key that opened it.
-local menuOpen = false
+--- Comparing what would be sent against what was sent last fixes both: the menu
+--- appears once, and having chosen from it, it stays closed until the player
+--- looks at something else or lets go and holds again.
+local lastShown = nil
+
+--- HOLD TO INTERACT. THIS IS A DESIGN DECISION, NOT AN OVERSIGHT.
+---
+--- The key stays held for the whole interaction: hold, aim, move the mouse over
+--- the option, click, release. Releasing at any point closes the menu and
+--- abandons the choice.
+---
+--- It was briefly changed to keep the menu open after release, on the reasoning
+--- that reaching a cursor means letting go. That reasoning is wrong for this
+--- interface — the cursor is available while the key is held, the mouse moves
+--- freely, and the release IS the cancel. Holding is also what makes the
+--- interaction modal without a second key to dismiss it.
+---
+--- The owner uses it this way and prefers it. If a future change makes the menu
+--- persist after release, it is changing behaviour somebody chose rather than
+--- fixing a defect.
 
 --- Everything the client knows about its own situation.
 ---
@@ -94,6 +112,7 @@ local function present()
     local hit = NxcTarget.Raycast.aim()
     if not hit then
         activeOptions = nil
+        lastShown = nil
         -- The ray hit nothing. Said out loud, because "nothing happened" has
         -- three causes and this separates one of them.
         if NxcTarget.Reticle then NxcTarget.Reticle.set('idle') end
@@ -103,6 +122,7 @@ local function present()
     local options = Runtime.resolve(hit)
     if #options == 0 then
         activeOptions = nil
+        lastShown = nil
         -- Hit something, and nothing applies to it. A different answer from
         -- hitting nothing, and the player can see which.
         if NxcTarget.Reticle then NxcTarget.Reticle.set('nothing') end
@@ -112,7 +132,28 @@ local function present()
     if NxcTarget.Reticle then NxcTarget.Reticle.set('available') end
 
     activeOptions = { hit = hit, options = options }
-    menuOpen = true
+
+    -- Compared structurally rather than by joining into one string. A separator
+    -- has to be a character no label contains, and picking one is a bet that
+    -- gets lost eventually — two different offers colliding on the same
+    -- signature would leave a stale menu on screen.
+    local changed = lastShown == nil or #lastShown ~= #options
+    if not changed then
+        for index, option in ipairs(options) do
+            local previous = lastShown[index]
+            if previous.key ~= option.key or previous.label ~= option.label then
+                changed = true
+                break
+            end
+        end
+    end
+
+    if not changed then return end
+
+    lastShown = {}
+    for index, option in ipairs(options) do
+        lastShown[index] = { key = option.key, label = option.label }
+    end
 
     -- Drawn by nxc_ui, which owns the single browser instance. A resource
     -- opening its own NUI is a second browser in the game client, which
@@ -141,7 +182,6 @@ end
 function Runtime.select(key)
     local current = activeOptions
     activeOptions = nil
-    menuOpen = false
 
     if not current then return end
 
@@ -180,11 +220,9 @@ function Runtime.setActive(active)
     targeting = active
 
     if not targeting then
-        -- The raycast loop stops either way. What survives depends on whether
-        -- the player is mid-decision.
-        if menuOpen then return end
-
+        -- Releasing the key abandons the choice. Deliberate: see the note above.
         activeOptions = nil
+        lastShown = nil
         if GetResourceState('nxc_ui') == 'started' then
             pcall(function() exports.nxc_ui:close() end)
         end
@@ -255,12 +293,13 @@ RegisterNetEvent('nxc_target:client:removeOwner', function(owner)
 end)
 
 --- The menu closed without a selection: Escape, or something else took over.
+---
+--- The offer is dropped so a click that arrives afterwards cannot resolve
+--- against it. If the key is still held the next pass rebuilds it within 150ms,
+--- which is the correct outcome — the player is still pointing at the thing.
 AddEventHandler('nxc_ui:client:closed', function(surface)
     if surface ~= 'nxc_target' then return end
-    menuOpen = false
-    -- Only clear the offer if targeting has already stopped. If the key is still
-    -- held, the next pass rebuilds it a moment later anyway.
-    if not targeting then activeOptions = nil end
+    activeOptions = nil
 end)
 
 AddEventHandler('onClientResourceStop', function(resource)
