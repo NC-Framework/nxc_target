@@ -31,4 +31,29 @@ NxcTarget.VERSION = (type(GetResourceMetadata) == 'function'
 
 NxcTarget.CONTRACT_VERSION = 1
 
+
+--- The nxc_lib contract this resource needs.
+---
+--- Checked here rather than in a server file, because this runs on BOTH sides
+--- and immediately after nxc_lib's own modules load.
+---
+--- Failing at startup with a sentence naming the cause beats failing later at
+--- whichever line first reached a function that is not there. An operator who
+--- installed a mixed compatibility set gets told so; without this they get
+--- `attempt to call a nil value` and no indication of why.
+local REQUIRED_LIB_CONTRACT = 3
+
+if type(Nxc) ~= 'table' then
+    error(('%s requires nxc_lib. Load its shared modules with @nxc_lib/... '
+        .. 'entries in shared_scripts: a dependency orders startup and shares '
+        .. 'no code, because every resource has its own Lua state.')
+        :format('nxc_target'), 0)
+end
+
+if (Nxc.CONTRACT_VERSION or 0) < REQUIRED_LIB_CONTRACT then
+    error(('%s requires nxc_lib contract %d and found %d. Install a whole '
+        .. 'compatibility set; mixing versions is unsupported.')
+        :format('nxc_target', REQUIRED_LIB_CONTRACT, Nxc.CONTRACT_VERSION or 0), 0)
+end
+
 return NxcTarget
