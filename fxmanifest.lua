@@ -24,7 +24,7 @@ nxc_legacy_compatibility 'none'
 
 author 'The Nexus Core Framework team'
 description 'Target-first world interaction for Nexus Core.'
-version '0.1.2'
+version '0.1.3'
 
 shared_scripts {
     '@nxc_lib/shared/namespace.lua',
@@ -55,6 +55,7 @@ client_scripts {
     'client/raycast.lua',
     'client/runtime.lua',
     'client/reticle.lua',
+    'client/diagnose.lua',
     'client/input.lua',
 }
 

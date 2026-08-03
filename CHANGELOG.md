@@ -2,6 +2,32 @@
 
 Entries are added only for genuinely user-visible or contract-relevant changes.
 
+## 0.1.3 - 2026-08-03
+
+### Fixed
+
+- **The raycast never hit anything.** `StartShapeTestLosProbe` is asynchronous:
+  it starts a probe whose result is ready on a later frame. `GetShapeTestResult`
+  returns a status first — 0 not started, 1 pending, 2 ready — and reading the
+  hit without checking it gets the pending answer, which is always "nothing".
+
+  So holding the interact key found nothing anywhere, and the crosshair added to
+  diagnose the previous defect reported exactly that.
+
+  Now uses the synchronous probe, and checks the status rather than discarding
+  it. A pending result is indistinguishable from an honest miss.
+
+### Added
+
+- `/nxc_target_debug` — what this client actually sees: whether targeting is
+  active, how many options arrived, what the ray is hitting, which options could
+  apply, and **for each one that does not appear, the filter that rejected it**.
+
+  Two diagnoses of "holding the key does nothing" were made by reading code.
+  Both were real defects; neither was visible from the server, and every round
+  trip cost a deployment. A candidate rejected for distance and one rejected for
+  a capability look identical from outside.
+
 ## 0.1.2 - 2026-08-03
 
 ### Fixed

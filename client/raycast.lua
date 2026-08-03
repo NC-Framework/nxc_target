@@ -46,12 +46,32 @@ function Raycast.aim()
     }
 
     local player = PlayerPedId()
-    local handle = StartShapeTestLosProbe(
+    -- SYNCHRONOUS, DELIBERATELY.
+    --
+    -- `StartShapeTestLosProbe` is ASYNCHRONOUS: it starts a probe and the result
+    -- is not ready until a later frame. `GetShapeTestResult` returns a STATUS
+    -- first — 0 not started, 1 pending, 2 ready — and reading the hit without
+    -- checking it gets the pending answer, which is always "nothing".
+    --
+    -- That shipped. The raycast returned nil on every call, so holding the
+    -- interact key found nothing anywhere, and the crosshair added to diagnose it
+    -- reported exactly that: the ray hit nothing.
+    --
+    -- The synchronous variant is correct here rather than a shortcut. This runs
+    -- at most every 150ms while the key is held, not every frame; one probe at
+    -- under 7Hz is not the cost the word "expensive" is warning about, and the
+    -- alternative — start a probe, wait a frame, read it — makes every
+    -- resolution span two frames for no benefit.
+    local handle = StartExpensiveSynchronousShapeTestLosProbe(
         camera.x, camera.y, camera.z,
         destination.x, destination.y, destination.z,
         TRACE_FLAGS, player, 4)
 
-    local _, hit, endCoords, _, entity = GetShapeTestResult(handle)
+    local status, hit, endCoords, _, entity = GetShapeTestResult(handle)
+
+    -- The status is checked rather than discarded. A pending result reports no
+    -- hit, which is indistinguishable from an honest miss.
+    if status ~= 2 then return nil end
     if hit ~= 1 or not entity or entity == 0 then return nil end
 
     local playerPosition = GetEntityCoords(player)
