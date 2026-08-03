@@ -149,6 +149,11 @@ function Options.validate(option)
             end
         end
     end
+    -- `hasServerAction` counts. It is what a server-broadcast option carries
+    -- instead of an event name, and without this every one of them is refused by
+    -- the client that receives it.
+    if option.hasServerAction == true then actions = actions + 1 end
+
     if actions == 0 then
         problems[#problems + 1] = problem('option', 'must do something when selected')
     end

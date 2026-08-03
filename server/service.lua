@@ -55,6 +55,9 @@ end
 local function displayCopy(option)
     return {
         key = option.key,
+        -- `id` as well as `key`. Validation requires an id, and without it a
+        -- receiving client refuses the option outright.
+        id = option.id,
         label = option.label,
         icon = option.icon,
         distance = NxcTarget.Options.distanceOf(option),
@@ -65,6 +68,18 @@ local function displayCopy(option)
         global = option.global,
         capability = option.capability,
         item = option.item,
+
+        -- SAYS AN ACTION EXISTS WITHOUT NAMING IT.
+        --
+        -- Two decisions collided here and the collision shipped. The event name
+        -- is stripped so a client cannot enumerate the server's event surface;
+        -- validation requires an option to do something, so an option that does
+        -- nothing is refused. Together they meant every broadcast option was
+        -- rejected by the receiving client and no interaction ever appeared.
+        --
+        -- A boolean satisfies the second without weakening the first: the client
+        -- knows there is something to invoke and still cannot say what.
+        hasServerAction = option.serverEvent ~= nil,
     }
 end
 

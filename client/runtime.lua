@@ -83,14 +83,22 @@ local function present()
     local hit = NxcTarget.Raycast.aim()
     if not hit then
         activeOptions = nil
+        -- The ray hit nothing. Said out loud, because "nothing happened" has
+        -- three causes and this separates one of them.
+        if NxcTarget.Reticle then NxcTarget.Reticle.set('idle') end
         return
     end
 
     local options = Runtime.resolve(hit)
     if #options == 0 then
         activeOptions = nil
+        -- Hit something, and nothing applies to it. A different answer from
+        -- hitting nothing, and the player can see which.
+        if NxcTarget.Reticle then NxcTarget.Reticle.set('nothing') end
         return
     end
+
+    if NxcTarget.Reticle then NxcTarget.Reticle.set('available') end
 
     activeOptions = { hit = hit, options = options }
 

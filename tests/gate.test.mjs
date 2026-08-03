@@ -233,3 +233,84 @@ describe('The server selection gate', () => {
     assert.equal(r.hasLabel, true);
   });
 });
+
+describe('A broadcast option survives the round trip', () => {
+  let lua;
+
+  beforeEach(async () => {
+    lua = await createResourceEngine('nxc_target', {
+      blocks: ['shared_scripts', 'server_scripts'],
+    });
+    await lua.doString(`
+      __broadcast = nil
+      function TriggerClientEvent(name, target, payload)
+        if name == 'nxc_target:client:register' then __broadcast = payload end
+      end
+      function GetPlayerPed() return 1 end
+      function GetEntityCoords() return { x = 0, y = 0, z = 0 } end
+      exports = setmetatable({}, { __index = function() return {} end })
+    `);
+  });
+
+  afterEach(() => lua.global.close());
+
+  test('what the server sends, a client can register', async () => {
+    // THE TEST THAT WAS MISSING. Fifty tests passed while every broadcast option
+    // was rejected by the receiving client, because none of them took what the
+    // server actually sends and fed it back into the validator a client uses.
+    //
+    // Two correct decisions collided: the event name is stripped so a client
+    // cannot enumerate the server's event surface, and validation requires an
+    // option to do something. Together, nothing ever appeared in game.
+    const r = await lua.doString(`
+      __exports['register']({
+        id = 'inspect', label = 'Inspect', global = 'ped',
+        serverEvent = 'my_job:server:inspect',
+      })
+
+      -- Exactly the payload a client receives, validated the way a client does.
+      local received = NxcTarget.Options.validate(__broadcast)
+      local fields = {}
+      if not received.ok then
+        for _, f in ipairs(received.error.details.fields) do fields[#fields + 1] = f.field end
+      end
+      return { ok = received.ok, why = table.concat(fields, ','),
+               namesEvent = __broadcast.serverEvent ~= nil,
+               knowsThereIsOne = __broadcast.hasServerAction == true }
+    `);
+    assert.equal(r.ok, true, `a client would refuse it: ${r.why}`);
+    // Still cannot name the event, which was the point of stripping it.
+    assert.equal(r.namesEvent, false);
+    assert.equal(r.knowsThereIsOne, true);
+  });
+
+  test('and it lands in a client registry, indexed where the raycast looks', async () => {
+    const r = await lua.doString(`
+      __exports['register']({
+        id = 'inspect', label = 'Inspect', global = 'ped',
+        serverEvent = 'my_job:server:inspect',
+      })
+
+      local clientRegistry = NxcTarget.Registry.new()
+      local added = NxcTarget.Registry.add(clientRegistry, __broadcast, 'nxc_target')
+
+      -- What Runtime.resolve asks for when the crosshair is on a ped.
+      local candidates = NxcTarget.Registry.candidates(clientRegistry, { kind = 'ped' })
+      return { added = added.ok, offered = #candidates,
+               label = candidates[1] and candidates[1].label }
+    `);
+    assert.equal(r.added, true);
+    assert.equal(r.offered, 1, 'the option was registered but the raycast would not find it');
+    assert.equal(r.label, 'Inspect');
+  });
+
+  test('a client-only option still needs a real action', async () => {
+    const r = await lua.doString(`
+      local result = NxcTarget.Options.validate({
+        id = 'x', label = 'X', global = 'ped', hasServerAction = false })
+      return result.ok
+    `);
+    // The marker must not become a way to register an option that does nothing.
+    assert.equal(r, false);
+  });
+});

@@ -2,6 +2,35 @@
 
 Entries are added only for genuinely user-visible or contract-relevant changes.
 
+## 0.1.2 - 2026-08-03
+
+### Fixed
+
+- **No server-registered option ever reached a client.** Two correct decisions
+  collided and the collision shipped: the event name is stripped from the copy
+  broadcast to clients so a client cannot enumerate the server event surface, and
+  validation requires an option to do something. Together, every broadcast option
+  was refused by the receiving client and no interaction ever appeared in game.
+
+  The copy now carries `hasServerAction` — the client knows there is something to
+  invoke and still cannot say what — and `id`, which validation also requires.
+
+- **A broadcast option kept the wrong key.** The client recomputed it from its own
+  resource name, so an option the server filed as `nxc_devtools:inspect` became
+  `nxc_target:inspect` on the client, and selecting it sent back a key the server
+  had never heard of. An existing key now wins.
+
+  Same defect nxc_interact had between its registry and its sessions, in a second
+  place, found the same way: by following what a real payload does rather than
+  testing each side alone.
+
+### Added
+
+- A crosshair while targeting, which is a diagnostic as much as an affordance.
+  "I held the key and nothing happened" has three indistinguishable causes — the
+  key is not bound, the ray hit nothing, the ray hit something with no options —
+  and the colour separates them.
+
 ## Unreleased
 
 Initial implementation of the target system.

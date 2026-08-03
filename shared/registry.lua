@@ -65,7 +65,18 @@ function Registry.add(registry, option, owner)
     local stored = {}
     for key, value in pairs(option) do stored[key] = value end
     stored.owner = owner
-    stored.key = Registry.key(owner, option.id)
+
+    -- AN EXISTING KEY WINS. A server-broadcast option already carries the key the
+    -- server knows it by, and recomputing one from the receiving resource's name
+    -- would produce `nxc_target:inspect` on a client for something the server
+    -- filed under `nxc_devtools:inspect`. The client would then send back a key
+    -- the server has never heard of, and every selection would be refused as an
+    -- unknown option.
+    --
+    -- This is the same defect nxc_interact had between its registry and its
+    -- sessions, in a second place. Found the same way: by following what a real
+    -- payload does rather than by testing each side alone.
+    stored.key = option.key or Registry.key(owner, option.id)
 
     if registry.byKey[stored.key] then
         Registry.remove(registry, stored.key)
