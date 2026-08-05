@@ -333,5 +333,19 @@ RegisterCommand('nxc_target_status', function(source)
     end
 end, true)
 
+-- nxc_core is REQUIRED rather than optional: without it the capability check in
+-- this file has nothing to ask, and an option gated on a capability nobody can
+-- verify must not be offered.
+Nxc.Service.start({
+    dependencies = { 'nxc_lib', 'nxc_zones', 'nxc_core' },
+    contractVersion = NxcTarget.CONTRACT_VERSION,
+    capabilities = { 'targeting' },
+    ready = true,
+})
+
+--- This resource's own health, for nxc_core's aggregate and for anyone asking
+--- directly. Plain, because a report behind a metatable arrives empty.
+exports('health', function() return Nxc.plain(Nxc.Health.report()) end)
+
 NxcTarget.Service = Service
 return Service

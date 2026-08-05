@@ -102,6 +102,16 @@ Entries are added only for genuinely user-visible or contract-relevant changes.
 
 ## Unreleased
 
+## 0.2.0 — 2026-08-05
+
+### Added
+
+- Registers itself as a service with nxc_core, and exports `health`. nxc_core is
+  a required dependency rather than an optional one: without it the capability
+  check has nothing to ask, and an option gated on a capability nobody can verify
+  must not be offered.
+
+
 Initial implementation of the target system.
 
 ### Added
